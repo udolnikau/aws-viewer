@@ -15,24 +15,15 @@ block nav
           span.icon-bar
           span.icon-bar
         a(href='/', class='navbar-brand') 
-          //img(class='navbar-brand-icon', src='/bower_components/patternfly/dist/img/logo-alt.svg', alt='')
-          img(class='navbar-brand-name', alt='AWS S3 Image Viewer')
+          h2.modal-title AWS S3 Image Viewer
+        h4(class='navbar-right')  By Uladzislau Dolnikau            ----         
       #navbarCollapseId1.collapse.navbar-collapse
-        ul.nav.navbar-nav.navbar-right.navbar-utility
-          li.dropdown
-            a(href='#0', class='dropdown-toggle nav-item-iconic' id='dropdownMenuHelpButton' data-toggle='dropdown' aria-haspopup='true' aria-expanded='true')
-              span(title='Help', class='pficon pficon-help fa-2x')
-              span(class='caret')
-            ul(class='dropdown-menu', aria-labelledby='dropdownMenuHelpButton')
-              li: a(href='/about') About
         ul.nav.navbar-nav.navbar-primary
           li.dropdown
             a(href='#0', class='dropdown-toggle nav-item-iconic' id='dropdownMenuPlusButton' data-toggle='dropdown' aria-haspopup='true' aria-expanded='true')
               span(title='Add', class='fa fa-plus')
-              span(class='caret')
             ul(class='dropdown-menu', aria-labelledby='dropdownMenuPlusButton')
-              // TODO: make this an a(href=) - not sure how to get it to toggle the modal correctly
-              li: button(class='btn btn-default wizard-pf-open wizard-pf-complete' data-target='#adds3bucket') Add S3 Bucket
+              li: button(class='btn btn-default wizard-pf-open wizard-pf-complete' id='dropdownMenuPlusButton' data-target='#adds3bucket') Upload image
           - var bucketsArray = JSON.parse(buckets);
           if bucketsArray.length < 1
             .toast-pf.toast-pf-top-right.alert-warning.alert-dismissable.alert
@@ -54,9 +45,9 @@ block nav
 block content
   .container-fluid.container-cards-pf
     br
-    p Welcome to #{title} - you are viewing S3 bucket #[strong #{showBucket}]
-
-    - var imagesArray = JSON.parse(images);
+    br
+    
+    - var imagesArray = images;
     if imagesArray.length < 1
       .blank-slate-pf
         .blank-slate-pf-icon
@@ -64,18 +55,13 @@ block content
           p #[strong No Images Found]
     else
       .row.row-cards-pf
-      each imageUrl in imagesArray ? imagesArray: ['DANGER-WILL-ROBINSON']
-        //.col-xs-12.col-sm-6.col-md-4.col-lg-3
-        .col-xs-12.col-sm-4.col-md-3.col-lg-2
+      each image in images ? imagesArray: ['DANGER-WILL-ROBINSON']
+        .col-xs-12.col-sm-8.col-md-4.col-lg-3
           .card-pf.card-pf-view
             .card-pf-body
               .card-pf-top-element
-                  img(src=imageUrl, alt='Image could not be rendered', style='max-height: 100%; width: 100%; object-fit: contain')
-              //.card-pf-title.text-center #{imageUrl}
-              .card-pf-items.text-center
-                a(href=imageUrl)
-                  span.fa.fa-arrow-circle-o-down.fa-2x
-    
+                  img(src=image, alt='Image could not be rendered', style='max-height: 100%; width: 100%; object-fit: contain')
+              .card-pf-title.text-center Some text here
 
   div(class='modal' id='adds3bucket' tabindex='-1' role='dialog')
     .modal-dialog.modal-lg.wizard-pf
@@ -83,18 +69,19 @@ block content
         .modal-header
           button(type='button' class='close' data-dismiss='modal' aria-hidden='true' aria-label='Close')
             span.pficon.pficon-close
-          h4.modal-title Add S3 Bucket
+          h4.modal-title Upload image
         .modal-body.wizard-pf-body.clearfix
           .wizard-pf-row
             .wizard-pf-main
+              h2.text-center Please select image to upload to S3 bucket #[strong #{showBucket}]
+              br
+              br
               .wizard-pf-contents
                 form.form-horizontal
                   .form-group.required
-                    label(class='col-sm-2 control-label' for='textInput-markup') Name
+                    label(class='col-sm-2 control-label' for='textInput-markup') Select image
                     .col-sm-10
-                      input(type='text' name='bucketNameTextInput' id='bucketNameTextInput' data-id='textInput-markup' class='form-control')
-              h4 Currently working on adding buckets dynamically, for now please use ENV vars
-
+                      input(type='file' name='bucketNameTextInput' id='bucketNameTextInput' data-id='textInput-markup' class='form-control')
         .modal-footer.wizard-pf-footer
           button(type='button' class='btn btn-default btn-cancel wizard-pf-cancel wizard-pf-dismiss') Cancel
           button(type='button' class='btn btn-primary wizard-pf-add disabled') Add
