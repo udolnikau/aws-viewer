@@ -77,14 +77,17 @@ block content
               br
               br
               .wizard-pf-contents
-                form.form-horizontal
+                form(action='/upload' method='post' enctype="multipart/form-data")
                   .form-group.required
                     label(class='col-sm-2 control-label' for='textInput-markup') Select image
                     .col-sm-10
-                      input(type='file' name='bucketNameTextInput' id='bucketNameTextInput' data-id='textInput-markup' class='form-control')
-        .modal-footer.wizard-pf-footer
-          button(type='button' class='btn btn-default btn-cancel wizard-pf-cancel wizard-pf-dismiss') Cancel
-          button(type='button' class='btn btn-primary wizard-pf-add disabled') Add
+                      input(type='file' name='bucketNameTextInput' class='form-control')
+                      br
+                      br
+                      br
+                      .modal-footer.wizard-pf-footer
+                        button(type='button' class='btn btn-default btn-cancel wizard-pf-cancel wizard-pf-dismiss') Cancel
+                        button(type='submit' class='btn btn-primary wizard-pf-add') Add
 
   script(type='text/javascript').
     $(document).ready(function() {
@@ -121,7 +124,7 @@ block content
         $(self.modal + " .wizard-pf-add").click(function() {
           // TODO add bucket to the list
           var bucketname = $('input[name=bucketNameTextInput]').val();
-          console.log('trying to add bucket ' + bucketname)
+          
         });
       };
       // Cancel/Close button clicked
