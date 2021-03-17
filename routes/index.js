@@ -8,17 +8,54 @@ var awssecretkey = 'L0mJElkDc2PIPpRmeXnRcRnyB+dxDP+NZl0hg+mN';
 var awsregion = 'us-east-1';
 AWS.config.update({accessKeyId: awskey, secretAccessKey: awssecretkey, region: awsregion});
 var s3 = new AWS.S3();
+var sns = new AWS.SNS();
+const topicArn = 'arn:aws:sns:us-east-1:796046735747:aws-viewer';
 
 var multer = require('multer');
-var upload = multer({ storage: multer.memoryStorage() });
 
+var upload = multer({storage: multer.memoryStorage()});
 var dbConnection = mysql.createConnection({
     host: 'image-viewer.c4eskojl0xwl.us-east-1.rds.amazonaws.com',
     user: 'admin',
     password: 'adminadmin',
     database: 'images'
 })
+
 dbConnection.connect();
+
+function handleResponse(err, res, msg) {
+    if (err) {
+        res.send({"statusCode": 500, err: err});
+    } else {
+        console.log(msg);
+        res.send({"statusCode": 200, "message": msg});
+    }
+}
+
+router.post('/subscribe', function (req, res) {
+    var email = req.body.email.toLowerCase();
+    if (email) {
+        sns.listSubscriptionsByTopic({TopicArn: topicArn}, function (err, data) {
+            if (err) {
+                console.log(err);
+                res.send({"statusCode": 500, err: err});
+            } else {
+                let subscription = data.Subscriptions.filter(e => email === e.Endpoint)[0];
+                if (subscription) {
+                    sns.unsubscribe({SubscriptionArn: subscription.SubscriptionArn}, function () {
+                        handleResponse(err, res, 'Subscription for email ' + email + ' has been removed');
+                    });
+                } else {
+                    sns.subscribe({Protocol: 'EMAIL', TopicArn: topicArn, Endpoint: email}, function () {
+                        handleResponse(err, res, 'Subscription added for email ' + email);
+                    });
+                }
+            }
+        })
+    } else {
+        res.send({"statusCode": 204})
+    }
+});
 
 router.get('/', function (req, res) {
     dbConnection.query('SELECT * from metadata AS metadata', null, function (err, rows) {
@@ -65,15 +102,18 @@ router.post('/upload', upload.single('bucketNameTextInput'), function (req, res,
             if (err) {
                 reject(err);
             } else {
-                dbConnection.query('INSERT INTO metadata (s3Key, title) values (?,?)', 
+                dbConnection.query('INSERT INTO metadata (s3Key, title) values (?,?)',
                     [req.file.originalname, req.file.originalname], function (err) {
-                    if (err) {
-                        console.log(err, err.stack);
-                    } else {
-                        resolve('success');
-                        res.send({"statusCode": 200})
-                    }
-                });
+                        if (err) {
+                            console.log(err, err.stack);
+                        } else {
+                            sns.publish({Message: 'New Image has been uploaded!', TopicArn: topicArn }, function () {
+                                console.log('SNS Notification has been published.');
+                            })
+                            resolve('success');
+                            res.send({"statusCode": 200})
+                        }
+                    });
             }
         })
     })
