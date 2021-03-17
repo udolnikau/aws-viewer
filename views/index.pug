@@ -17,30 +17,37 @@ block nav
         a(href='/', class='navbar-brand') 
           h2.modal-title AWS S3 Image Viewer
         h4(class='navbar-right')  By Uladzislau Dolnikau            ----         
-      #navbarCollapseId1.collapse.navbar-collapse
-        ul.nav.navbar-nav.navbar-primary
-          li.dropdown
-            a(href='#0', class='dropdown-toggle nav-item-iconic' id='dropdownMenuPlusButton' data-toggle='dropdown' aria-haspopup='true' aria-expanded='true')
-              span(title='Add', class='fa fa-plus')
-            ul(class='dropdown-menu', aria-labelledby='dropdownMenuPlusButton')
-              li: button(class='btn btn-default wizard-pf-open wizard-pf-complete' id='dropdownMenuPlusButton' data-target='#adds3bucket') Upload image
-          - var bucketsArray = JSON.parse(buckets);
-          if bucketsArray.length < 1
-            .toast-pf.toast-pf-top-right.alert-warning.alert-dismissable.alert
-              button(type='button' class='close' data-dismiss='alert' aria-hidden='true')
-                span.pficon.pficon-close
-              span.pficon.pficon-warning-triangle-o
-              | No buckets have been configured
-            li
-              a(href='#0')
-                span(class='pficon pficon-warning-triangle-o' data-toggle='tooltip' title='NONE')
-                span(class='list-group-item-value') #[em   NO BUCKETS]
-          else
-            each bucketIter in bucketsArray ? bucketsArray: ['No Buckets!']
+      form(action='/subscribe' method='post')
+        #navbarCollapseId1.collapse.navbar-collapse
+          ul.nav.navbar-nav.navbar-primary
+            li.dropdown
+              a(href='#0', class='dropdown-toggle nav-item-iconic' id='dropdownMenuPlusButton' data-toggle='dropdown' aria-haspopup='true' aria-expanded='true')
+                span(title='Add', class='fa fa-plus')
+              ul(class='dropdown-menu', aria-labelledby='dropdownMenuPlusButton')
+                li: button(type='button' class='btn btn-default wizard-pf-open wizard-pf-complete' id='dropdownMenuPlusButton' data-target='#adds3bucket') Upload image
+            - var bucketsArray = JSON.parse(buckets);
+            if bucketsArray.length < 1
+              .toast-pf.toast-pf-top-right.alert-warning.alert-dismissable.alert
+                button(type='button' class='close' data-dismiss='alert' aria-hidden='true')
+                  span.pficon.pficon-close
+                span.pficon.pficon-warning-triangle-o
+                | No buckets have been configured
               li
-                a(href='/?showBucket='+ bucketIter)
-                  span(class='fa fa-bitbucket' data-toggle='tooltip' title=bucketIter)
-                  span(class='list-group-item-value') #[  #{bucketIter}]
+                a(href='#0')
+                  span(class='pficon pficon-warning-triangle-o' data-toggle='tooltip' title='NONE')
+                  span(class='list-group-item-value') #[em   NO BUCKETS]
+            
+            else
+              each bucketIter in bucketsArray ? bucketsArray: ['No Buckets!']
+                  li
+                    a(href='/?showBucket='+ bucketIter)
+                      span(class='fa fa-bitbucket' data-toggle='tooltip' title=bucketIter)
+                      span(class='list-group-item-value') #[  #{bucketIter}]
+                  li
+                    input(type='text' name='email' class='form-control')
+                  li
+                    button
+                      span(class='list-group-item-value') #[  Subscribe/Unsubscribe]
 
 block content
   .container-fluid.container-cards-pf
