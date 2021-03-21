@@ -9,7 +9,9 @@ var awsregion = 'us-east-1';
 AWS.config.update({accessKeyId: awskey, secretAccessKey: awssecretkey, region: awsregion});
 var s3 = new AWS.S3();
 var sns = new AWS.SNS();
+var lambda = new AWS.Lambda();
 const topicArn = 'arn:aws:sns:us-east-1:796046735747:aws-viewer';
+const bucket = 'images-store-bucket';
 
 var multer = require('multer');
 
@@ -29,6 +31,24 @@ function handleResponse(err, res, msg) {
     } else {
         console.log(msg);
         res.send({"statusCode": 200, "message": msg});
+    }
+}
+
+async function checkS3Bucket() {
+    const buckets = await s3.listBuckets().promise();
+    if (buckets && buckets.Buckets.filter(b => b.Name === bucket).length === 0) {
+        var params = {
+            FunctionName: 'createS3Bucket',
+            InvocationType: 'RequestResponse',
+            LogType: 'Tail',
+            Payload: '{ "name":"' + bucket + '"}'
+        };
+        console.log('Invoking CreateS3Bucket function.');
+        dbConnection.query('DELETE from metadata where s3Key IS NOT NULL', null, ()=>{
+            return lambda.invoke(params).promise();
+        });
+    } else {
+        console.log('S3 bucket exist.');
     }
 }
 
@@ -58,33 +78,35 @@ router.post('/subscribe', function (req, res) {
 });
 
 router.get('/', function (req, res) {
-    dbConnection.query('SELECT * from metadata AS metadata', null, function (err, rows) {
-        if (err) {
-            console.log(err, err.stack);
-        } else {
-            const titles = rows.map(row => row.title);
-            let promises = [], images = [];
-            rows.forEach(row => {
-                let imagePromise = s3.getObject({"Bucket": 'images-store-bucket', "Key": row.s3Key}).promise();
-                promises.push(imagePromise);
-            });
-            Promise.all(promises).then(promise => {
-                promise.forEach((s3ResponseImage, index) => {
-                    let image = new Buffer(s3ResponseImage.Body).toString('base64');
-                    image = {
-                        image: "data:" + s3ResponseImage.ContentType + ";base64," + image,
-                        title: titles[index]
-                    };
-                    images.push(image);
-                })
-                res.render('index', {
-                    title: 'AWS S3 Image Viewer',
-                    showBucket: req.query.showBucket,
-                    images: images,
-                    buckets: JSON.stringify(['images-store-bucket'])
+    checkS3Bucket().then(function () {
+        dbConnection.query('SELECT * from metadata AS metadata', null, function (err, rows) {
+            if (err) {
+                console.log(err, err.stack);
+            } else {
+                const titles = rows.map(row => row.title);
+                let promises = [], images = [];
+                rows.forEach(row => {
+                    let imagePromise = s3.getObject({"Bucket": 'images-store-bucket', "Key": row.s3Key}).promise();
+                    promises.push(imagePromise);
                 });
-            })
-        }
+                Promise.all(promises).then(promise => {
+                    promise.forEach((s3ResponseImage, index) => {
+                        let image = new Buffer(s3ResponseImage.Body).toString('base64');
+                        image = {
+                            image: "data:" + s3ResponseImage.ContentType + ";base64," + image,
+                            title: titles[index]
+                        };
+                        images.push(image);
+                    })
+                    res.render('index', {
+                        title: 'AWS S3 Image Viewer',
+                        showBucket: req.query.showBucket,
+                        images: images,
+                        buckets: JSON.stringify([bucket])
+                    });
+                })
+            }
+        });
     });
 });
 
@@ -95,7 +117,7 @@ router.post('/upload', upload.single('bucketNameTextInput'), function (req, res,
         ContentEncoding: 'base64',
         ContentType: 'image/jpeg',
         ACL: 'public-read',
-        Bucket: 'images-store-bucket',
+        Bucket: bucket,
     }
     return new Promise((resolve, reject) => {
         s3.putObject(params, (err) => {
@@ -107,7 +129,7 @@ router.post('/upload', upload.single('bucketNameTextInput'), function (req, res,
                         if (err) {
                             console.log(err, err.stack);
                         } else {
-                            sns.publish({Message: 'New Image has been uploaded!', TopicArn: topicArn }, function () {
+                            sns.publish({Message: 'New Image has been uploaded!', TopicArn: topicArn}, function () {
                                 console.log('SNS Notification has been published.');
                             })
                             resolve('success');
@@ -127,7 +149,7 @@ router.get('/random', function (req, res, next) {
             let keys = rows.map(row => row.s3Key);
             const key = keys[Math.floor(Math.random() * keys.length)];
             var params = {
-                "Bucket": 'images-store-bucket',
+                "Bucket": bucket,
                 "Key": key
             };
             s3.getObject(params, function (err, data) {
@@ -154,7 +176,7 @@ router.get('/random', function (req, res, next) {
 
 router.get('/:imageId', function (req, res, next) {
     var params = {
-        "Bucket": 'images-store-bucket',
+        "Bucket": bucket,
         "Key": req.params.imageId
     };
     s3.getObject(params, function (err, data) {
